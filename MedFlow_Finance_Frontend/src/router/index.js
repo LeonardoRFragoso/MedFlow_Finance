@@ -3,13 +3,25 @@ import { useAuthStore } from '@/stores/auth'
 
 const routes = [
   {
+    path: '/',
+    name: 'Landing',
+    component: () => import('@/pages/Landing.vue'),
+    meta: { requiresAuth: false, isPublic: true },
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('@/pages/Login.vue'),
     meta: { requiresAuth: false },
   },
   {
-    path: '/',
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/pages/Register.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/app',
     name: 'Dashboard',
     component: () => import('@/pages/Dashboard.vue'),
     meta: { requiresAuth: true },
@@ -51,8 +63,8 @@ router.beforeEach((to, from, next) => {
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')
-  } else if (to.path === '/login' && authStore.isAuthenticated) {
-    next('/')
+  } else if ((to.path === '/login' || to.path === '/register') && authStore.isAuthenticated) {
+    next('/app')
   } else {
     next()
   }

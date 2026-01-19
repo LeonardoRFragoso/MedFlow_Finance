@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: medflow_postgres
+    environment:
+      POSTGRES_DB: medflow_finance
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - medflow_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: medflow_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - medflow_network
+
+  # PHP/Laravel Backend
+  backend:
+    image: php:8.2-cli
+    container_name: medflow_backend
+    working_dir: /var/www/html
+    volumes:
+      - ./MedFlow_Finance_Backend:/var/www/html
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      DB_HOST: postgres
+      REDIS_HOST: redis
+    networks:
+      - medflow_network
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y libpq-dev libzip-dev unzip git &&
+        docker-php-ext-install pdo pdo_pgsql zip &&
+        curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer &&
+        composer install --no-interaction &&
+        php artisan key:generate --force &&
+        php artisan migrate --seed --force &&
+        php artisan serve --host=0.0.0.0 --port=8000
+      "
+
+  # Vue.js Frontend
+  frontend:
+    image: node:20-alpine
+    container_name: medflow_frontend
+    working_dir: /app
+    volumes:
+      - ./MedFlow_Finance_Frontend:/app
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - medflow_network
+    command: >
+      sh -c "
+        npm install &&
+        npm run dev -- --host 0.0.0.0
+      "
+
+volumes:
+  postgres_data:
+
+networks:
+  medflow_network:
+    driver: bridge

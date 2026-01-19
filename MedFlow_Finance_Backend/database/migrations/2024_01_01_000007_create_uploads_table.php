@@ -33,7 +33,7 @@ return new class extends Migration
             $table->date('billing_period_end')->nullable();
             
             $table->text('description')->nullable();
-            $table->json('tags')->default('[]');
+            $table->json('tags')->nullable();
             
             $table->timestamps();
             $table->softDeletes();

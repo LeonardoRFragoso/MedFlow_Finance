@@ -17,7 +17,7 @@ return new class extends Migration
             
             $table->boolean('enable_glosa_detection')->default(true);
             $table->boolean('enable_compliance_check')->default(true);
-            $table->json('validation_rules')->default('{}');
+            $table->json('validation_rules')->nullable();
             
             $table->integer('data_retention_days')->default(2555);
             $table->boolean('auto_delete_old_files')->default(false);

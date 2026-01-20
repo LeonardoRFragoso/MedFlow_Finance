@@ -40,7 +40,7 @@ services:
     environment:
       DB_HOST: postgres
       REDIS_HOST: redis
-      COMPOSER_PROCESS_TIMEOUT: 2000
+      COMPOSER_PROCESS_TIMEOUT: 3000
     networks:
       - medflow_network
     command: >
@@ -48,8 +48,9 @@ services:
         apt-get update && apt-get install -y libpq-dev libzip-dev unzip git &&
         docker-php-ext-install pdo pdo_pgsql zip &&
         curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer &&
-        composer config --global process-timeout 2000 &&
-        composer install --no-interaction --prefer-dist --optimize-autoloader &&
+        export COMPOSER_PROCESS_TIMEOUT=3000 &&
+        composer install --no-interaction --prefer-dist --no-scripts --no-progress &&
+        composer run-script post-autoload-dump &&
         php artisan key:generate --force &&
         php artisan migrate --seed --force &&
         php artisan serve --host=0.0.0.0 --port=8000

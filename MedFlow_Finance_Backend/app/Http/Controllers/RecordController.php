@@ -9,7 +9,10 @@ class RecordController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Record::where('clinic_id', auth()->user()->clinic_id);
+        $this->authorize('viewAny', Record::class);
+        
+        $query = Record::with(['upload', 'clinic', 'validations'])
+            ->where('clinic_id', auth()->user()->clinic_id);
 
         // Filtros
         if ($request->has('status')) {
@@ -51,6 +54,8 @@ class RecordController extends Controller
     {
         $record = Record::where('clinic_id', auth()->user()->clinic_id)
             ->findOrFail($id);
+        
+        $this->authorize('view', $record);
 
         return $this->respondSuccess([
             'record' => $record,
@@ -61,10 +66,10 @@ class RecordController extends Controller
 
     public function update(Request $request, $id)
     {
-        $this->authorize('update', Record::class);
-
         $record = Record::where('clinic_id', auth()->user()->clinic_id)
             ->findOrFail($id);
+        
+        $this->authorize('update', $record);
 
         $validated = $request->validate([
             'status' => 'required|in:pending,approved,rejected,disputed',

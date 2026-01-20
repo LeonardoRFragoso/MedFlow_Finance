@@ -3,13 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Upload;
+use App\Http\Requests\StoreUploadRequest;
 use Illuminate\Http\Request;
 
 class UploadController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Upload::where('clinic_id', auth()->user()->clinic_id);
+        $this->authorize('viewAny', Upload::class);
+        
+        $query = Upload::with(['user', 'clinic'])
+            ->where('clinic_id', auth()->user()->clinic_id);
 
         // Filtros
         if ($request->has('status')) {
@@ -24,6 +28,13 @@ class UploadController extends Controller
             $query->where('original_filename', 'like', '%' . $request->search . '%');
         }
 
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->whereBetween('billing_period_start', [
+                $request->start_date,
+                $request->end_date
+            ]);
+        }
+
         $uploads = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 15));
 
@@ -34,6 +45,8 @@ class UploadController extends Controller
     {
         $upload = Upload::where('clinic_id', auth()->user()->clinic_id)
             ->findOrFail($id);
+        
+        $this->authorize('view', $upload);
 
         return $this->respondSuccess([
             'upload' => $upload,
@@ -48,17 +61,9 @@ class UploadController extends Controller
         ], 'Upload recuperado com sucesso');
     }
 
-    public function store(Request $request)
+    public function store(StoreUploadRequest $request)
     {
-        $this->authorize('create', Upload::class);
-
-        $validated = $request->validate([
-            'file' => 'required|file|mimes:xlsx,xls,csv|max:104857600',
-            'billing_period_start' => 'required|date',
-            'billing_period_end' => 'required|date|after:billing_period_start',
-            'description' => 'nullable|string|max:500',
-            'tags' => 'nullable|array',
-        ]);
+        $validated = $request->validated();
 
         $file = $request->file('file');
         $clinic = auth()->user()->clinic;
@@ -132,10 +137,10 @@ class UploadController extends Controller
 
     public function destroy($id)
     {
-        $this->authorize('delete', Upload::class);
-
         $upload = Upload::where('clinic_id', auth()->user()->clinic_id)
             ->findOrFail($id);
+        
+        $this->authorize('delete', $upload);
 
         $upload->delete();
 

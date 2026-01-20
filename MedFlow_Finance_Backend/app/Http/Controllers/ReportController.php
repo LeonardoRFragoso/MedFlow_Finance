@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Report;
 use App\Models\Record;
+use App\Http\Requests\StoreReportRequest;
 use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Report::class);
+        
         $query = Report::where('clinic_id', auth()->user()->clinic_id);
 
         // Filtros
@@ -35,6 +38,8 @@ class ReportController extends Controller
     {
         $report = Report::where('clinic_id', auth()->user()->clinic_id)
             ->findOrFail($id);
+        
+        $this->authorize('view', $report);
 
         return $this->respondSuccess([
             'report' => $report,
@@ -42,19 +47,16 @@ class ReportController extends Controller
         ], 'Relatório recuperado com sucesso');
     }
 
-    public function store(Request $request)
+    public function store(StoreReportRequest $request)
     {
-        $this->authorize('create', Report::class);
-
-        $validated = $request->validate([
-            'report_type' => 'required|in:summary,detailed,errors,validation,financial',
-            'period_start' => 'required|date',
-            'period_end' => 'required|date|after:period_start',
-        ]);
-
-        $clinic = auth()->user()->clinic;
+        $validated = $request->validated();
+        
+        // Map 'type' to 'report_type' for backward compatibility
+        $reportType = $validated['type'];
         $periodStart = $validated['period_start'];
         $periodEnd = $validated['period_end'];
+
+        $clinic = auth()->user()->clinic;
 
         // Gerar dados do relatório
         $records = Record::where('clinic_id', $clinic->id)
@@ -70,7 +72,7 @@ class ReportController extends Controller
 
         // Preparar conteúdo do relatório
         $content = $this->generateReportContent(
-            $validated['report_type'],
+            $reportType,
             $records,
             $clinic
         );
@@ -79,7 +81,7 @@ class ReportController extends Controller
         $report = Report::create([
             'clinic_id' => $clinic->id,
             'user_id' => auth()->id(),
-            'report_type' => $validated['report_type'],
+            'report_type' => $reportType,
             'period_start' => $periodStart,
             'period_end' => $periodEnd,
             'total_records' => $totalRecords,
@@ -94,6 +96,18 @@ class ReportController extends Controller
         return $this->respondSuccess([
             'report' => $report,
         ], 'Relatório gerado com sucesso', 201);
+    }
+
+    public function destroy($id)
+    {
+        $report = Report::where('clinic_id', auth()->user()->clinic_id)
+            ->findOrFail($id);
+        
+        $this->authorize('delete', $report);
+
+        $report->delete();
+
+        return $this->respondSuccess(null, 'Relatório deletado com sucesso');
     }
 
     public function exportCsv($id)

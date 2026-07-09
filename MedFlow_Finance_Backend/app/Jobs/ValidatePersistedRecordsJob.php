@@ -55,6 +55,9 @@ class ValidatePersistedRecordsJob implements ShouldQueue
                     $result = $validationEngine->validate($recordData);
 
                     // Registrar validações no banco com record_id
+                    $hasErrors = false;
+                    $hasWarnings = false;
+
                     foreach ($result['validations'] as $rule) {
                         Validation::create([
                             'clinic_id' => $this->upload->clinic_id,
@@ -72,11 +75,26 @@ class ValidatePersistedRecordsJob implements ShouldQueue
                         ]);
 
                         $validationCount++;
+
+                        // Rastrear severidade para atualizar status do record
+                        if (!$rule['is_valid'] && $rule['severity'] === 'error') {
+                            $hasErrors = true;
+                        }
+                        if (!$rule['is_valid'] && $rule['severity'] === 'warning') {
+                            $hasWarnings = true;
+                        }
                     }
 
-                    // Atualizar status do record baseado na validação
-                    if (!$result['is_valid']) {
-                        $record->update(['status' => 'error']);
+                    // Atualizar status do record baseado na validação (usando status válidos)
+                    if ($hasErrors) {
+                        // Erro crítico: rejeitar registro
+                        $record->update(['status' => 'rejected']);
+                    } elseif ($hasWarnings) {
+                        // Apenas warnings: marcar como disputado para revisão
+                        $record->update(['status' => 'disputed']);
+                    } else {
+                        // Tudo válido: aprovar registro
+                        $record->update(['status' => 'approved']);
                     }
 
                 } catch (\Exception $e) {

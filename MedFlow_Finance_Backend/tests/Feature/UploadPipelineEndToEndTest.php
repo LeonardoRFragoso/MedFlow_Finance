@@ -76,7 +76,7 @@ CSV;
             'total_rows' => 3,
         ]);
 
-        // Simular dados parseados em cache
+        // Simular dados parseados em cache (como ParseFileJob faria)
         $parsedData = [
             'records' => [
                 [
@@ -123,36 +123,54 @@ CSV;
 
         cache()->put("upload_parsed_{$upload->id}", $parsedData, now()->addHours(24));
 
-        // Executar pipeline manualmente
+        // Executar pipeline na ordem correta
         (new ParseFileJob($upload))->handle();
         (new NormalizeRecordsJob($upload))->handle();
         (new FinalizeUploadJob($upload))->handle();
         (new ValidatePersistedRecordsJob($upload))->handle();
         (new FinalizeUploadStatusJob($upload))->handle();
 
-        // Validações
-        $this->assertDatabaseCount('records', 3);
+        // Refresh upload para obter dados atualizados
+        $upload->refresh();
+
+        // Validações críticas
+        $recordCount = Record::where('upload_id', $upload->id)->count();
+        $this->assertGreaterThan(0, $recordCount, 'Deve haver registros criados');
+        $this->assertEquals(3, $recordCount, 'Deve haver 3 registros');
+
+        // Validar status do upload
         $this->assertDatabaseHas('uploads', [
             'id' => $upload->id,
             'status' => 'completed',
         ]);
 
-        // Verificar que todas as validações têm record_id
+        // Validar que todas as validações têm record_id
+        $orphanedValidations = Validation::where('upload_id', $upload->id)
+            ->whereNull('record_id')
+            ->count();
         $this->assertEquals(
             0,
-            Validation::whereNull('record_id')->count(),
+            $orphanedValidations,
             'Nenhuma validação deve ter record_id nulo'
         );
 
-        // Verificar que há validações
-        $this->assertGreaterThan(0, Validation::count());
+        // Validar que há validações
+        $validationCount = Validation::where('upload_id', $upload->id)->count();
+        $this->assertGreaterThan(0, $validationCount, 'Deve haver validações');
 
-        // Verificar que cada record tem validações
+        // Validar que cada record tem status válido
+        $invalidStatusCount = Record::where('upload_id', $upload->id)
+            ->whereNotIn('status', ['pending', 'approved', 'rejected', 'disputed'])
+            ->count();
+        $this->assertEquals(0, $invalidStatusCount, 'Todos os records devem ter status válido');
+
+        // Validar que cada record tem validações
         $records = Record::where('upload_id', $upload->id)->get();
         foreach ($records as $record) {
+            $recordValidations = $record->validations()->count();
             $this->assertGreaterThan(
                 0,
-                $record->validations()->count(),
+                $recordValidations,
                 "Record {$record->id} deve ter validações"
             );
         }

@@ -25,17 +25,24 @@ class FinalizeUploadJob implements ShouldQueue
     public function handle(): void
     {
         try {
-            Log::info("Finalizando upload", [
+            Log::info("Persistindo registros normalizados", [
                 'upload_id' => $this->upload->id,
             ]);
 
-            // Recuperar registros válidos do cache
-            $validRecordsCacheKey = "upload_valid_records_{$this->upload->id}";
-            $validRecords = cache()->get($validRecordsCacheKey, []);
+            // Recuperar registros normalizados do cache (criados por NormalizeRecordsJob)
+            $normalizedCacheKey = "upload_normalized_{$this->upload->id}";
+            $normalizedRecords = cache()->get($normalizedCacheKey, []);
+
+            if (empty($normalizedRecords)) {
+                Log::warning("Nenhum registro normalizado encontrado em cache", [
+                    'upload_id' => $this->upload->id,
+                ]);
+                return;
+            }
 
             // Persistir registros no banco de dados
             $recordsToInsert = [];
-            foreach ($validRecords as $record) {
+            foreach ($normalizedRecords as $record) {
                 $recordsToInsert[] = [
                     'clinic_id' => $this->upload->clinic_id,
                     'upload_id' => $this->upload->id,
@@ -72,19 +79,16 @@ class FinalizeUploadJob implements ShouldQueue
                 'record_count' => count($recordsToInsert),
             ]);
 
-            // Limpar cache de parsing e normalização (validações serão criadas no próximo job)
+            // Limpar cache de parsing (normalização será limpa após validação)
             cache()->forget("upload_parsed_{$this->upload->id}");
-            cache()->forget("upload_normalized_{$this->upload->id}");
-            cache()->forget("upload_valid_records_{$this->upload->id}");
 
-            // Nota: Não limpar upload_validations_* pois será usado no ValidatePersistedRecordsJob
+            // Nota: Não limpar upload_normalized_* pois pode ser necessário para debug
+            // Não limpar upload_validations_* pois será usado no ValidatePersistedRecordsJob
             // O status será atualizado para 'completed' após ValidatePersistedRecordsJob
 
-            Log::info("Upload finalizado com sucesso", [
+            Log::info("Registros normalizados persistidos com sucesso", [
                 'upload_id' => $this->upload->id,
-                'total_rows' => $this->upload->total_rows,
-                'valid_rows' => $this->upload->valid_rows,
-                'error_rows' => $this->upload->error_rows,
+                'record_count' => count($recordsToInsert),
             ]);
 
         } catch (\Exception $e) {

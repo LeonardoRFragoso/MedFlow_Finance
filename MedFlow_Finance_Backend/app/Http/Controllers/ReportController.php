@@ -112,10 +112,10 @@ class ReportController extends Controller
 
     public function exportCsv($id)
     {
-        $this->authorize('export', Report::class);
-
         $report = Report::where('clinic_id', auth()->user()->clinic_id)
             ->findOrFail($id);
+
+        $this->authorize('export', $report);
 
         // Gerar CSV baseado no tipo de relatório
         $csv = $this->generateCsv($report);
@@ -132,10 +132,10 @@ class ReportController extends Controller
 
     public function exportPdf($id)
     {
-        $this->authorize('export', Report::class);
-
         $report = Report::where('clinic_id', auth()->user()->clinic_id)
             ->findOrFail($id);
+
+        $this->authorize('export', $report);
 
         // PDF ainda não está implementado
         return response()->json([

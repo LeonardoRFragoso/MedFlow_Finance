@@ -25,6 +25,10 @@ class Report extends BaseModel
         'generated_at',
     ];
 
+    protected $appends = [
+        'type',
+    ];
+
     protected $casts = [
         'period_start' => 'date',
         'period_end' => 'date',

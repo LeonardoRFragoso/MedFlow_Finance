@@ -50,6 +50,12 @@ const routes = [
     component: () => import('@/pages/Reports.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/roi',
+    name: 'ROI',
+    component: () => import('@/pages/ROI.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
 const router = createRouter({

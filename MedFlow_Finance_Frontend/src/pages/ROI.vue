@@ -105,8 +105,8 @@
           icon-color="primary"
         />
         <MetricCard
-          label="Total Pago"
-          :value="roi.financial_impact?.total_paid || 0"
+          label="Total Aprovado"
+          :value="roi.financial_impact?.total_approved || 0"
           format="currency"
           icon-color="success"
         />
@@ -174,7 +174,13 @@
             :key="idx"
             class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
           >
-            <p class="text-sm font-medium text-blue-900 dark:text-blue-100">{{ rec }}</p>
+            <div class="flex items-start justify-between mb-2">
+              <p class="text-sm font-medium text-blue-900 dark:text-blue-100">{{ rec.action || rec }}</p>
+              <span v-if="rec.priority" class="text-xs font-semibold px-2 py-1 rounded" :class="getPriorityClass(rec.priority)">
+                {{ rec.priority }}
+              </span>
+            </div>
+            <p v-if="rec.expected_result" class="text-xs text-blue-700 dark:text-blue-200">{{ rec.expected_result }}</p>
           </div>
         </div>
       </div>
@@ -206,9 +212,30 @@ const filters = ref({
   periodEnd: new Date().toISOString().split('T')[0]
 })
 
+const validatePeriod = () => {
+  if (!filters.value.periodStart) {
+    error.value = 'Data inicial é obrigatória'
+    return false
+  }
+  if (!filters.value.periodEnd) {
+    error.value = 'Data final é obrigatória'
+    return false
+  }
+  if (new Date(filters.value.periodEnd) < new Date(filters.value.periodStart)) {
+    error.value = 'Data final não pode ser anterior à data inicial'
+    return false
+  }
+  return true
+}
+
 const loadROI = async () => {
-  loading.value = true
   error.value = null
+
+  if (!validatePeriod()) {
+    return
+  }
+
+  loading.value = true
 
   try {
     const params = new URLSearchParams()
@@ -223,6 +250,15 @@ const loadROI = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const getPriorityClass = (priority) => {
+  const classes = {
+    high: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+    medium: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
+    low: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+  }
+  return classes[priority] || classes.low
 }
 
 onMounted(() => {

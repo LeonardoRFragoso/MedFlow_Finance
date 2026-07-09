@@ -14,15 +14,10 @@ class StoreReportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => [
-                'required',
-                'string',
-                'max:255',
-            ],
             'type' => [
                 'required',
                 'string',
-                'in:monthly,quarterly,annual,custom',
+                'in:summary,detailed,errors,validation,financial',
             ],
             'period_start' => [
                 'required',
@@ -35,30 +30,21 @@ class StoreReportRequest extends FormRequest
                 'after_or_equal:period_start',
                 'before_or_equal:today',
             ],
-            'filters' => [
-                'nullable',
-                'array',
-            ],
-            'filters.status' => [
-                'nullable',
-                'array',
-            ],
-            'filters.status.*' => [
-                'string',
-                'in:approved,rejected,disputed,pending',
-            ],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'title.required' => 'O título do relatório é obrigatório.',
-            'title.max' => 'O título não pode ter mais de 255 caracteres.',
             'type.required' => 'O tipo de relatório é obrigatório.',
-            'type.in' => 'Tipo de relatório inválido.',
+            'type.in' => 'Tipo de relatório inválido. Tipos aceitos: summary, detailed, errors, validation, financial.',
             'period_start.required' => 'A data de início do período é obrigatória.',
+            'period_start.date' => 'A data de início deve ser uma data válida.',
+            'period_start.before_or_equal' => 'A data de início não pode ser posterior à data final.',
             'period_end.required' => 'A data final do período é obrigatória.',
+            'period_end.date' => 'A data final deve ser uma data válida.',
+            'period_end.after_or_equal' => 'A data final não pode ser anterior à data de início.',
+            'period_end.before_or_equal' => 'A data final não pode ser no futuro.',
         ];
     }
 }

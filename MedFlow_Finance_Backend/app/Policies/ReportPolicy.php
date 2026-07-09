@@ -35,7 +35,7 @@ class ReportPolicy
             return false;
         }
 
-        if (!$user->clinic->is_active) {
+        if (!$user->clinic->isActive()) {
             return false;
         }
 

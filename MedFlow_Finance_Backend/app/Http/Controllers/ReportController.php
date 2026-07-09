@@ -117,13 +117,17 @@ class ReportController extends Controller
         $report = Report::where('clinic_id', auth()->user()->clinic_id)
             ->findOrFail($id);
 
-        // TODO: Implementar exportação CSV
-        // Disparar job ExportDataJob
+        // Gerar CSV baseado no tipo de relatório
+        $csv = $this->generateCsv($report);
 
-        return $this->respondSuccess([
-            'message' => 'Exportação iniciada',
-            'report_id' => $report->id,
-        ], 'Exportação em progresso');
+        // Retornar arquivo CSV
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=utf-8',
+            'Content-Disposition' => "attachment; filename=\"medflow-report-{$report->id}.csv\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ]);
     }
 
     public function exportPdf($id)
@@ -133,13 +137,11 @@ class ReportController extends Controller
         $report = Report::where('clinic_id', auth()->user()->clinic_id)
             ->findOrFail($id);
 
-        // TODO: Implementar exportação PDF
-        // Disparar job ExportDataJob
-
-        return $this->respondSuccess([
-            'message' => 'Exportação iniciada',
-            'report_id' => $report->id,
-        ], 'Exportação em progresso');
+        // PDF ainda não está implementado
+        return response()->json([
+            'success' => false,
+            'message' => 'Exportação PDF ainda não disponível.',
+        ], 501);
     }
 
     private function generateReportContent($type, $records, $clinic)
@@ -279,5 +281,75 @@ class ReportController extends Controller
                 ],
             ],
         ];
+    }
+
+    private function generateCsv($report)
+    {
+        $lines = [];
+
+        // Cabeçalho
+        switch ($report->report_type) {
+            case 'summary':
+                $lines[] = 'Métrica,Valor';
+                $lines[] = 'Total de Registros,' . $report->total_records;
+                $lines[] = 'Registros Válidos,' . $report->total_valid;
+                $lines[] = 'Registros com Erro,' . $report->total_errors;
+                $lines[] = 'Registros com Aviso,' . $report->total_warnings;
+                $lines[] = 'Valor Total Faturado,' . number_format($report->total_amount, 2, ',', '.');
+                break;
+
+            case 'detailed':
+                $lines[] = 'Paciente,CPF,Código Procedimento,Data Procedimento,Valor Faturado,Status';
+                $records = Record::where('clinic_id', auth()->user()->clinic_id)
+                    ->whereDate('procedure_date', '>=', $report->period_start)
+                    ->whereDate('procedure_date', '<=', $report->period_end)
+                    ->get();
+                foreach ($records as $record) {
+                    $lines[] = sprintf(
+                        '"%s","%s","%s","%s","%s","%s"',
+                        $record->patient_name,
+                        $record->patient_cpf,
+                        $record->procedure_code,
+                        $record->procedure_date->format('d/m/Y'),
+                        number_format($record->amount_billed, 2, ',', '.'),
+                        $record->status
+                    );
+                }
+                break;
+
+            case 'errors':
+                $lines[] = 'Paciente,Código Procedimento,Valor,Quantidade de Erros';
+                $records = Record::where('clinic_id', auth()->user()->clinic_id)
+                    ->where('status', 'rejected')
+                    ->whereDate('procedure_date', '>=', $report->period_start)
+                    ->whereDate('procedure_date', '<=', $report->period_end)
+                    ->get();
+                foreach ($records as $record) {
+                    $lines[] = sprintf(
+                        '"%s","%s","%s",%d',
+                        $record->patient_name,
+                        $record->procedure_code,
+                        number_format($record->amount_billed, 2, ',', '.'),
+                        $record->errors()->count()
+                    );
+                }
+                break;
+
+            case 'validation':
+                $lines[] = 'Métrica,Valor';
+                $lines[] = 'Total de Validações,' . $report->content['validation_summary']['total_validations'] ?? 0;
+                $lines[] = 'Erros,' . ($report->content['validation_summary']['errors'] ?? 0);
+                $lines[] = 'Avisos,' . ($report->content['validation_summary']['warnings'] ?? 0);
+                break;
+
+            case 'financial':
+                $lines[] = 'Métrica,Valor';
+                $lines[] = 'Total Faturado,' . number_format($report->total_amount, 2, ',', '.');
+                $lines[] = 'Total Pago,' . number_format($report->content['financial_summary']['total_paid'] ?? 0, 2, ',', '.');
+                $lines[] = 'Total Pendente,' . number_format($report->content['financial_summary']['total_pending'] ?? 0, 2, ',', '.');
+                break;
+        }
+
+        return implode("\n", $lines);
     }
 }

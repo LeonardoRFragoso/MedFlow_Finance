@@ -4,14 +4,27 @@ namespace App\Http\Controllers;
 
 use App\Domains\Report\Services\ROICalculator;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class ROIController extends Controller
 {
     public function summary(Request $request)
     {
         $clinic = auth()->user()->clinic;
-        $periodStart = $request->get('period_start', now()->subMonth());
-        $periodEnd = $request->get('period_end', now());
+        
+        // Converter strings para Carbon se necessário
+        $periodStart = $request->has('period_start') 
+            ? Carbon::parse($request->get('period_start'))
+            : now()->subDays(30);
+            
+        $periodEnd = $request->has('period_end')
+            ? Carbon::parse($request->get('period_end'))
+            : now();
+
+        // Validar período
+        if ($periodEnd->isBefore($periodStart)) {
+            return $this->respondError('A data final não pode ser anterior à data inicial', 422);
+        }
 
         $calculator = new ROICalculator($clinic->id, $periodStart, $periodEnd);
         $roi = $calculator->calculate();
@@ -22,8 +35,20 @@ class ROIController extends Controller
     public function executiveReport(Request $request)
     {
         $clinic = auth()->user()->clinic;
-        $periodStart = $request->get('period_start', now()->subMonth());
-        $periodEnd = $request->get('period_end', now());
+        
+        // Converter strings para Carbon se necessário
+        $periodStart = $request->has('period_start')
+            ? Carbon::parse($request->get('period_start'))
+            : now()->subDays(30);
+            
+        $periodEnd = $request->has('period_end')
+            ? Carbon::parse($request->get('period_end'))
+            : now();
+
+        // Validar período
+        if ($periodEnd->isBefore($periodStart)) {
+            return $this->respondError('A data final não pode ser anterior à data inicial', 422);
+        }
 
         $calculator = new ROICalculator($clinic->id, $periodStart, $periodEnd);
         $roi = $calculator->calculate();

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Upload;
 use App\Http\Requests\StoreUploadRequest;
+use App\Jobs\ProcessUploadJob;
 use Illuminate\Http\Request;
 
 class UploadController extends Controller
@@ -127,8 +128,8 @@ class UploadController extends Controller
             'tags' => $validated['tags'] ?? [],
         ]);
 
-        // TODO: Disparar job de processamento
-        // ProcessUploadJob::dispatch($upload);
+        // Disparar job de processamento
+        ProcessUploadJob::dispatch($upload);
 
         return $this->respondSuccess([
             'upload' => $upload,

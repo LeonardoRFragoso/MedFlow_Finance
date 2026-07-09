@@ -1,0 +1,11 @@
+procedure_code,procedure_date,amount_billed,patient_name,patient_cpf,insurance_name,insurance_id,provider_name,authorization_number,amount_paid,amount_pending
+PROC001,2024-01-15,1500.00,João Silva,12345678901,Unimed,UNI001,Clínica Central,AUTH001,1500.00,0.00
+PROC002,2024-01-16,2500.00,Maria Santos,98765432109,Bradesco Saúde,BRAD001,Clínica Central,AUTH002,2500.00,0.00
+PROC003,2024-01-17,800.00,Pedro Oliveira,11122233344,Amil,AMIL001,Clínica Central,AUTH003,0.00,800.00
+PROC004,2024-01-18,3200.00,Ana Costa,55566677788,Unimed,UNI002,Clínica Central,AUTH004,3200.00,0.00
+PROC005,2024-01-19,1200.00,Carlos Mendes,99988877766,Particular,,Clínica Central,,1200.00,0.00
+PROC006,2024-01-20,5000.00,Lucia Ferreira,44433322211,Bradesco Saúde,BRAD002,Clínica Central,AUTH005,5000.00,0.00
+PROC007,2024-01-21,950.00,Roberto Alves,77788899900,Amil,AMIL002,Clínica Central,AUTH006,950.00,0.00
+PROC008,2024-01-22,2100.00,Fernanda Dias,66655544433,Unimed,UNI003,Clínica Central,AUTH007,2100.00,0.00
+PROC009,2024-01-23,4500.00,Gustavo Rocha,33344455566,Bradesco Saúde,BRAD003,Clínica Central,AUTH008,4500.00,0.00
+PROC010,2024-01-24,1800.00,Juliana Martins,22211100099,Amil,AMIL003,Clínica Central,AUTH009,1800.00,0.00

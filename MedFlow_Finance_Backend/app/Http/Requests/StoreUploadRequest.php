@@ -12,7 +12,7 @@ class StoreUploadRequest extends FormRequest
             return false;
         }
 
-        if (!$this->user()->clinic->is_active) {
+        if (!$this->user()->clinic->isActive()) {
             return false;
         }
 

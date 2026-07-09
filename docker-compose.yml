@@ -57,6 +57,36 @@ services:
         php artisan serve --host=0.0.0.0 --port=8000
       "
 
+  # Laravel Queue Worker
+  queue:
+    image: php:8.2-cli
+    container_name: medflow_queue
+    working_dir: /var/www/html
+    volumes:
+      - ./MedFlow_Finance_Backend:/var/www/html
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    environment:
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      COMPOSER_PROCESS_TIMEOUT: 3000
+    networks:
+      - medflow_network
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y libpq-dev libzip-dev unzip git &&
+        docker-php-ext-install pdo pdo_pgsql zip &&
+        curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer &&
+        export COMPOSER_PROCESS_TIMEOUT=3000 &&
+        cp .env.example .env &&
+        composer install --no-interaction --prefer-dist --no-scripts --no-progress &&
+        composer run-script post-autoload-dump &&
+        php artisan key:generate --force &&
+        php artisan queue:work --tries=3 --timeout=300
+      "
+
   # Vue.js Frontend
   frontend:
     image: node:20-alpine

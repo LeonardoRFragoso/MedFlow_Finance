@@ -92,24 +92,43 @@
           </svg>
           Lista de Registros
         </h2>
-      </div>
-
-      <div v-if="loading" class="empty-state">
-        <div class="animate-pulse flex flex-col items-center">
-          <div class="w-12 h-12 bg-gray-200 dark:bg-dark-700 rounded-full mb-4"></div>
-          <div class="h-4 w-40 bg-gray-200 dark:bg-dark-700 rounded"></div>
-        </div>
-      </div>
-
-      <div v-else-if="records.length === 0" class="empty-state">
-        <div class="empty-state-icon">
-          <svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        <button
+          @click="applyFilters"
+          :disabled="loading"
+          class="btn-secondary text-sm"
+        >
+          <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-        </div>
-        <p class="empty-state-text">Nenhum registro encontrado</p>
-        <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Tente ajustar os filtros ou faça um novo upload</p>
+          Atualizar
+        </button>
       </div>
+
+      <!-- Loading -->
+      <LoadingState
+        v-if="loading"
+        message="Carregando registros..."
+      />
+
+      <!-- Erro -->
+      <ErrorState
+        v-else-if="error && records.length === 0"
+        title="Erro ao carregar registros"
+        :message="error"
+      >
+        <template #action>
+          <button @click="applyFilters" class="btn-secondary mt-4">
+            Tentar Novamente
+          </button>
+        </template>
+      </ErrorState>
+
+      <!-- Vazio -->
+      <EmptyState
+        v-else-if="records.length === 0"
+        title="Nenhum registro encontrado"
+        message="Tente ajustar os filtros ou faça um novo upload"
+      />
 
       <div v-else class="overflow-x-auto -mx-6">
         <table class="table-modern">
@@ -151,9 +170,7 @@
                 <span class="font-semibold text-gray-900 dark:text-white">{{ formatCurrency(record.amount_billed) }}</span>
               </td>
               <td>
-                <span :class="getStatusBadgeClass(record.status)">
-                  {{ getStatusLabel(record.status) }}
-                </span>
+                <StatusBadge :status="record.status" />
               </td>
               <td class="pr-6">
                 <button
@@ -300,9 +317,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '@/services/api'
+import LoadingState from '@/components/ui/LoadingState.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import ErrorState from '@/components/ui/ErrorState.vue'
+import StatusBadge from '@/components/ui/StatusBadge.vue'
 
 const records = ref([])
 const loading = ref(false)
+const error = ref(null)
 const selectedRecord = ref(null)
 const filters = ref({
   status: '',
@@ -337,28 +359,9 @@ const clearFilters = () => {
   applyFilters()
 }
 
-const getStatusLabel = (status) => {
-  const labels = {
-    pending: 'Pendente',
-    approved: 'Aprovado',
-    rejected: 'Rejeitado',
-    disputed: 'Disputado',
-  }
-  return labels[status] || status
-}
-
-const getStatusBadgeClass = (status) => {
-  const classes = {
-    pending: 'badge-warning',
-    approved: 'badge-success',
-    rejected: 'badge-danger',
-    disputed: 'badge-warning',
-  }
-  return classes[status] || 'badge-warning'
-}
-
 const applyFilters = async () => {
   loading.value = true
+  error.value = null
   try {
     const params = {}
     if (filters.value.status) params.status = filters.value.status
@@ -368,8 +371,9 @@ const applyFilters = async () => {
 
     const response = await api.get('/records', { params })
     records.value = response.data.data
-  } catch (error) {
-    console.error('Erro ao carregar registros:', error)
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Erro ao carregar registros'
+    console.error('Erro ao carregar registros:', err)
   } finally {
     loading.value = false
   }

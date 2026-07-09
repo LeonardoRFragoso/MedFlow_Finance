@@ -174,18 +174,43 @@
           </svg>
           Histórico de Uploads
         </h2>
-        <span class="badge-neutral">{{ uploadsStore.uploads.length }} arquivos</span>
+        <button
+          @click="uploadsStore.fetchUploads"
+          :disabled="uploadsStore.loading"
+          class="btn-secondary text-sm"
+        >
+          <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Atualizar
+        </button>
       </div>
 
-      <div v-if="uploadsStore.uploads.length === 0" class="empty-state">
-        <div class="empty-state-icon">
-          <svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-          </svg>
-        </div>
-        <p class="empty-state-text">Nenhum upload realizado ainda</p>
-        <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Seus arquivos enviados aparecerão aqui</p>
-      </div>
+      <!-- Loading -->
+      <LoadingState
+        v-if="uploadsStore.loading"
+        message="Carregando uploads..."
+      />
+
+      <!-- Erro -->
+      <ErrorState
+        v-else-if="uploadsStore.error && uploadsStore.uploads.length === 0"
+        title="Erro ao carregar uploads"
+        :message="uploadsStore.error"
+      >
+        <template #action>
+          <button @click="uploadsStore.fetchUploads" class="btn-secondary mt-4">
+            Tentar Novamente
+          </button>
+        </template>
+      </ErrorState>
+
+      <!-- Vazio -->
+      <EmptyState
+        v-else-if="uploadsStore.uploads.length === 0"
+        title="Nenhum upload realizado"
+        message="Seus arquivos enviados aparecerão aqui"
+      />
 
       <div v-else class="overflow-x-auto -mx-6">
         <table class="table-modern">
@@ -218,9 +243,7 @@
                 <div class="text-xs text-gray-500 dark:text-gray-400">{{ formatTime(upload.created_at) }}</div>
               </td>
               <td>
-                <span :class="getStatusBadgeClass(upload.status)">
-                  {{ getStatusLabel(upload.status) }}
-                </span>
+                <StatusBadge :status="upload.status" />
               </td>
               <td>
                 <div class="flex items-center gap-2">
@@ -256,6 +279,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useUploadsStore } from '@/stores/uploads'
+import LoadingState from '@/components/ui/LoadingState.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import ErrorState from '@/components/ui/ErrorState.vue'
+import StatusBadge from '@/components/ui/StatusBadge.vue'
 
 const uploadsStore = useUploadsStore()
 const uploadForm = ref({
@@ -314,26 +341,6 @@ const formatTime = (date) => {
 const getProgressPercent = (upload) => {
   if (!upload.total_rows || upload.total_rows === 0) return 0
   return Math.round((upload.valid_rows / upload.total_rows) * 100)
-}
-
-const getStatusLabel = (status) => {
-  const labels = {
-    pending: 'Pendente',
-    processing: 'Processando',
-    completed: 'Concluído',
-    failed: 'Erro',
-  }
-  return labels[status] || status
-}
-
-const getStatusBadgeClass = (status) => {
-  const classes = {
-    pending: 'badge-warning',
-    processing: 'badge-warning',
-    completed: 'badge-success',
-    failed: 'badge-danger',
-  }
-  return classes[status] || 'badge-warning'
 }
 
 onMounted(() => {

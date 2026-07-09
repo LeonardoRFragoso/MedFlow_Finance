@@ -52,7 +52,7 @@ const statusConfig = {
     icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'
   },
   disputed: {
-    label: 'Contestado',
+    label: 'Em disputa',
     class: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
     icon: 'M12 8v4m0 4v2m0 4v2M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
   }

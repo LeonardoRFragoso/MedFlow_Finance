@@ -62,4 +62,17 @@ class ReportPolicy
 
         return $user->id === $report->user_id;
     }
+
+    public function export(User $user, Report $report): bool
+    {
+        if (!$user->hasPermission('reports.export')) {
+            return false;
+        }
+
+        if ($user->clinic_id !== $report->clinic_id) {
+            return false;
+        }
+
+        return true;
+    }
 }

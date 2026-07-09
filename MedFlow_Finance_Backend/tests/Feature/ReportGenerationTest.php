@@ -276,14 +276,18 @@ class ReportGenerationTest extends TestCase
             'success',
             'message',
             'data' => [
-                'data' => [
-                    '*' => [
-                        'id',
-                        'report_type',
-                        'period_start',
-                        'period_end',
-                    ]
+                '*' => [
+                    'id',
+                    'report_type',
+                    'period_start',
+                    'period_end',
                 ]
+            ],
+            'pagination' => [
+                'total',
+                'per_page',
+                'current_page',
+                'last_page',
             ]
         ]);
     }

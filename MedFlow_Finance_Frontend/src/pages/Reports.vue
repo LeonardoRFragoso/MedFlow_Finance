@@ -390,12 +390,12 @@ const generateReport = async () => {
   loading.value = true
   try {
     const response = await api.post('/reports', {
-      report_type: reportForm.value.type,
+      type: reportForm.value.type,
       period_start: reportForm.value.periodStart,
       period_end: reportForm.value.periodEnd,
     })
 
-    reports.value.unshift(response.data.data)
+    reports.value.unshift(response.data.data.report)
     reportForm.value = { type: '', periodStart: '', periodEnd: '' }
   } catch (error) {
     console.error('Erro ao gerar relatório:', error)

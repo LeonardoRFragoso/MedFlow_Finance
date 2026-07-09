@@ -83,4 +83,9 @@ class Report extends BaseModel
 
         return round(($this->total_valid / $this->total_records) * 100, 2);
     }
+
+    public function getTypeAttribute()
+    {
+        return $this->report_type;
+    }
 }

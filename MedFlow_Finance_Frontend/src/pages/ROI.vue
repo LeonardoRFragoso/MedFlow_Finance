@@ -174,13 +174,26 @@
             :key="idx"
             class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
           >
-            <div class="flex items-start justify-between mb-2">
-              <p class="text-sm font-medium text-blue-900 dark:text-blue-100">{{ rec.action || rec }}</p>
-              <span v-if="rec.priority" class="text-xs font-semibold px-2 py-1 rounded" :class="getPriorityClass(rec.priority)">
-                {{ rec.priority }}
-              </span>
-            </div>
-            <p v-if="rec.expected_result" class="text-xs text-blue-700 dark:text-blue-200">{{ rec.expected_result }}</p>
+            <!-- Se for objeto com campos estruturados -->
+            <template v-if="typeof rec === 'object' && rec.action">
+              <div class="flex items-start justify-between mb-3">
+                <div class="flex-1">
+                  <h4 v-if="rec.title" class="font-medium text-blue-900 dark:text-blue-100 mb-1">{{ rec.title }}</h4>
+                  <p class="text-sm font-medium text-blue-900 dark:text-blue-100">{{ rec.action }}</p>
+                </div>
+                <span v-if="rec.priority" class="text-xs font-semibold px-2 py-1 rounded ml-2 flex-shrink-0" :class="getPriorityClass(rec.priority)">
+                  {{ rec.priority }}
+                </span>
+              </div>
+              <p v-if="rec.description" class="text-xs text-blue-700 dark:text-blue-200 mb-2">{{ rec.description }}</p>
+              <p v-if="rec.potential_impact" class="text-xs text-blue-600 dark:text-blue-300 italic">
+                <strong>Impacto potencial:</strong> {{ rec.potential_impact }}
+              </p>
+            </template>
+            <!-- Se for string simples -->
+            <template v-else>
+              <p class="text-sm font-medium text-blue-900 dark:text-blue-100">{{ rec }}</p>
+            </template>
           </div>
         </div>
       </div>

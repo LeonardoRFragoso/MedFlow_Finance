@@ -30,6 +30,26 @@
         </div>
       </div>
 
+      <!-- Erro -->
+      <div v-if="error" class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+        <div class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 4v2M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="text-red-700 dark:text-red-200">{{ error }}</p>
+        </div>
+      </div>
+
+      <!-- Sucesso -->
+      <div v-if="successMessage" class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+        <div class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="text-green-700 dark:text-green-200">{{ successMessage }}</p>
+        </div>
+      </div>
+
       <form @submit.prevent="generateReport" class="space-y-6">
         <!-- Report Type Selection -->
         <div>
@@ -129,15 +149,31 @@
         </h2>
       </div>
 
-      <div v-if="reports.length === 0" class="empty-state">
-        <div class="empty-state-icon">
-          <svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        </div>
-        <p class="empty-state-text">Nenhum relatório gerado ainda</p>
-        <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Gere seu primeiro relatório usando o formulário acima</p>
-      </div>
+      <!-- Loading -->
+      <LoadingState
+        v-if="loadingReports"
+        message="Carregando relatórios..."
+      />
+
+      <!-- Erro -->
+      <ErrorState
+        v-else-if="error && reports.length === 0"
+        title="Erro ao carregar relatórios"
+        :message="error"
+      >
+        <template #action>
+          <button @click="loadReports" class="btn-secondary mt-4">
+            Tentar Novamente
+          </button>
+        </template>
+      </ErrorState>
+
+      <!-- Vazio -->
+      <EmptyState
+        v-else-if="reports.length === 0"
+        title="Nenhum relatório gerado"
+        message="Gere seu primeiro relatório usando o formulário acima"
+      />
 
       <div v-else class="overflow-x-auto -mx-6">
         <table class="table-modern">
@@ -216,6 +252,16 @@
                     </svg>
                     CSV
                   </button>
+                  <button
+                    disabled
+                    title="Exportação PDF ainda não disponível"
+                    class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    PDF
+                  </button>
                 </div>
               </td>
             </tr>
@@ -291,6 +337,13 @@
             </div>
           </div>
 
+          <div class="modal-body" v-if="selectedReport.content">
+            <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Conteúdo do Relatório</h3>
+            <div class="bg-gray-50 dark:bg-dark-700 rounded-lg p-4 max-h-64 overflow-y-auto">
+              <pre class="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">{{ JSON.stringify(selectedReport.content, null, 2) }}</pre>
+            </div>
+          </div>
+
           <div class="modal-footer">
             <button @click="selectedReport = null" class="btn-secondary">
               Fechar
@@ -311,10 +364,16 @@
 <script setup>
 import { ref, onMounted, h } from 'vue'
 import api from '@/services/api'
+import LoadingState from '@/components/ui/LoadingState.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import ErrorState from '@/components/ui/ErrorState.vue'
 
 const reports = ref([])
 const selectedReport = ref(null)
 const loading = ref(false)
+const loadingReports = ref(false)
+const error = ref(null)
+const successMessage = ref(null)
 const reportForm = ref({
   type: '',
   periodStart: '',
@@ -386,7 +445,36 @@ const getReportTypeLabel = (type) => {
   return labels[type] || type
 }
 
+const validateForm = () => {
+  error.value = null
+  
+  if (!reportForm.value.type) {
+    error.value = 'Tipo de relatório é obrigatório'
+    return false
+  }
+  if (!reportForm.value.periodStart) {
+    error.value = 'Data inicial é obrigatória'
+    return false
+  }
+  if (!reportForm.value.periodEnd) {
+    error.value = 'Data final é obrigatória'
+    return false
+  }
+  if (new Date(reportForm.value.periodEnd) < new Date(reportForm.value.periodStart)) {
+    error.value = 'Data final não pode ser anterior à data inicial'
+    return false
+  }
+  return true
+}
+
 const generateReport = async () => {
+  error.value = null
+  successMessage.value = null
+
+  if (!validateForm()) {
+    return
+  }
+
   loading.value = true
   try {
     const response = await api.post('/reports', {
@@ -397,8 +485,12 @@ const generateReport = async () => {
 
     reports.value.unshift(response.data.data.report)
     reportForm.value = { type: '', periodStart: '', periodEnd: '' }
-  } catch (error) {
-    console.error('Erro ao gerar relatório:', error)
+    successMessage.value = 'Relatório gerado com sucesso!'
+    setTimeout(() => { successMessage.value = null }, 3000)
+  } catch (err) {
+    const message = err.response?.data?.message || 'Erro ao gerar relatório'
+    error.value = message
+    console.error('Erro ao gerar relatório:', err)
   } finally {
     loading.value = false
   }
@@ -408,30 +500,65 @@ const viewReport = (report) => {
   selectedReport.value = report
 }
 
+const parseBlobError = async (blobData) => {
+  try {
+    const text = await blobData.text()
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
+}
+
 const exportReport = async (report, format) => {
   try {
     const response = await api.get(`/reports/${report.id}/export/${format}`, {
       responseType: 'blob',
     })
 
+    // Se for PDF e retornar erro 501
+    if (format === 'pdf') {
+      const errorData = await parseBlobError(response.data)
+      if (errorData && !errorData.success) {
+        error.value = errorData.message || 'Exportação PDF ainda não disponível'
+        return
+      }
+    }
+
     const url = window.URL.createObjectURL(new Blob([response.data]))
     const link = document.createElement('a')
     link.href = url
-    link.setAttribute('download', `relatorio-${report.id}.${format}`)
+    const typeLabel = getReportTypeLabel(report.report_type)
+    const fileName = `medflow-report-${typeLabel.toLowerCase()}-${report.period_start}-${report.period_end}.${format}`
+    link.setAttribute('download', fileName)
     document.body.appendChild(link)
     link.click()
     link.parentNode.removeChild(link)
-  } catch (error) {
-    console.error('Erro ao exportar relatório:', error)
+    window.URL.revokeObjectURL(url)
+  } catch (err) {
+    // Tentar parsear erro de blob
+    if (err.response?.data instanceof Blob) {
+      const errorData = await parseBlobError(err.response.data)
+      if (errorData) {
+        error.value = errorData.message || 'Erro ao exportar relatório'
+        return
+      }
+    }
+    error.value = err.response?.data?.message || 'Erro ao exportar relatório'
+    console.error('Erro ao exportar relatório:', err)
   }
 }
 
 const loadReports = async () => {
+  loadingReports.value = true
+  error.value = null
   try {
     const response = await api.get('/reports')
     reports.value = response.data.data
-  } catch (error) {
-    console.error('Erro ao carregar relatórios:', error)
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Erro ao carregar relatórios'
+    console.error('Erro ao carregar relatórios:', err)
+  } finally {
+    loadingReports.value = false
   }
 }
 

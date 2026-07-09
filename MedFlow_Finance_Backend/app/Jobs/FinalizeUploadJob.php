@@ -72,17 +72,13 @@ class FinalizeUploadJob implements ShouldQueue
                 'record_count' => count($recordsToInsert),
             ]);
 
-            // Limpar cache
+            // Limpar cache de parsing e normalização (validações serão criadas no próximo job)
             cache()->forget("upload_parsed_{$this->upload->id}");
             cache()->forget("upload_normalized_{$this->upload->id}");
-            cache()->forget("upload_validations_{$this->upload->id}");
             cache()->forget("upload_valid_records_{$this->upload->id}");
 
-            // Atualizar status para completed
-            $this->upload->update([
-                'status' => 'completed',
-                'processing_completed_at' => now(),
-            ]);
+            // Nota: Não limpar upload_validations_* pois será usado no ValidatePersistedRecordsJob
+            // O status será atualizado para 'completed' após ValidatePersistedRecordsJob
 
             Log::info("Upload finalizado com sucesso", [
                 'upload_id' => $this->upload->id,

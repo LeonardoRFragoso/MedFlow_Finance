@@ -4,11 +4,11 @@ namespace App\Models;
 
 use App\Models\Traits\HasTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-class Error extends Model
+class Error extends BaseModel
 {
-    use HasFactory, HasTenant;
+    use HasFactory, HasTenant, HasUuids;
 
     protected $table = 'errors';
 

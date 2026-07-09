@@ -39,12 +39,18 @@ class ProcessUploadJob implements ShouldQueue
                 'processing_started_at' => now(),
             ]);
 
-            // Disparar cadeia de jobs
+            // Disparar cadeia de jobs em ordem correta
+            // 1. ParseFileJob - Lê arquivo e extrai dados
+            // 2. NormalizeRecordsJob - Padroniza dados
+            // 3. FinalizeUploadJob - Persiste Records no banco
+            // 4. ValidatePersistedRecordsJob - Valida Records já persistidos com record_id
+            // 5. FinalizeUploadStatusJob - Finaliza upload como completed
             Bus::chain([
                 new ParseFileJob($this->upload),
                 new NormalizeRecordsJob($this->upload),
-                new ValidateRecordsJob($this->upload),
                 new FinalizeUploadJob($this->upload),
+                new ValidatePersistedRecordsJob($this->upload),
+                new FinalizeUploadStatusJob($this->upload),
             ])->dispatch();
 
             Log::info("Cadeia de jobs disparada com sucesso", [

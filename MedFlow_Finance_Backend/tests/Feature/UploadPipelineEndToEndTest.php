@@ -60,70 +60,31 @@ PROC002,2024-01-16,2500.00,Maria Santos,98765432109,Bradesco Saúde,BRAD001,Clí
 PROC003,2024-01-17,800.00,Pedro Oliveira,11122233344,Amil,AMIL001,Clínica Central,AUTH003,0.00,800.00
 CSV;
 
-        $path = storage_path('app/test_upload.csv');
-        file_put_contents($path, $csvContent);
-        return $path;
+        // Salvar no storage fake (local disk)
+        Storage::disk('local')->put('uploads/test/test_upload.csv', $csvContent);
+        return 'uploads/test/test_upload.csv';
     }
 
     /** @test */
     public function pipeline_creates_records_before_validations()
     {
-        // Criar upload
+        // Criar upload apontando para arquivo real no storage
+        $filePath = $this->csvPath;
+        $fileHash = hash('sha256', Storage::disk('local')->get($filePath));
+
         $upload = Upload::factory()->create([
             'clinic_id' => $this->clinic->id,
             'user_id' => $this->user->id,
+            'file_path' => $filePath,
+            'original_filename' => 'test_upload.csv',
+            'file_type' => 'csv',
+            'file_hash' => $fileHash,
             'status' => 'pending',
-            'total_rows' => 3,
+            'total_rows' => 0,
         ]);
 
-        // Simular dados parseados em cache (como ParseFileJob faria)
-        $parsedData = [
-            'records' => [
-                [
-                    'procedure_code' => 'PROC001',
-                    'procedure_date' => '2024-01-15',
-                    'amount_billed' => 1500.00,
-                    'patient_name' => 'João Silva',
-                    'patient_cpf' => '12345678901',
-                    'insurance_name' => 'Unimed',
-                    'insurance_id' => 'UNI001',
-                    'provider_name' => 'Clínica Central',
-                    'authorization_number' => 'AUTH001',
-                    'amount_paid' => 1500.00,
-                    'amount_pending' => 0.00,
-                ],
-                [
-                    'procedure_code' => 'PROC002',
-                    'procedure_date' => '2024-01-16',
-                    'amount_billed' => 2500.00,
-                    'patient_name' => 'Maria Santos',
-                    'patient_cpf' => '98765432109',
-                    'insurance_name' => 'Bradesco Saúde',
-                    'insurance_id' => 'BRAD001',
-                    'provider_name' => 'Clínica Central',
-                    'authorization_number' => 'AUTH002',
-                    'amount_paid' => 2500.00,
-                    'amount_pending' => 0.00,
-                ],
-                [
-                    'procedure_code' => 'PROC003',
-                    'procedure_date' => '2024-01-17',
-                    'amount_billed' => 800.00,
-                    'patient_name' => 'Pedro Oliveira',
-                    'patient_cpf' => '11122233344',
-                    'insurance_name' => 'Amil',
-                    'insurance_id' => 'AMIL001',
-                    'provider_name' => 'Clínica Central',
-                    'authorization_number' => 'AUTH003',
-                    'amount_paid' => 0.00,
-                    'amount_pending' => 800.00,
-                ],
-            ],
-        ];
-
-        cache()->put("upload_parsed_{$upload->id}", $parsedData, now()->addHours(24));
-
-        // Executar pipeline na ordem correta
+        // Executar pipeline na ordem correta com arquivo real
+        // Não simular cache - deixar ParseFileJob fazer seu trabalho
         (new ParseFileJob($upload))->handle();
         (new NormalizeRecordsJob($upload))->handle();
         (new FinalizeUploadJob($upload))->handle();
@@ -133,18 +94,24 @@ CSV;
         // Refresh upload para obter dados atualizados
         $upload->refresh();
 
-        // Validações críticas
+        // VALIDAÇÕES CRÍTICAS
+        
+        // 1. Validar que records foram criados
         $recordCount = Record::where('upload_id', $upload->id)->count();
-        $this->assertGreaterThan(0, $recordCount, 'Deve haver registros criados');
-        $this->assertEquals(3, $recordCount, 'Deve haver 3 registros');
+        $this->assertGreaterThan(0, $recordCount, 'Deve haver registros criados a partir do arquivo real');
+        $this->assertEquals(3, $recordCount, 'Deve haver exatamente 3 registros do CSV');
 
-        // Validar status do upload
+        // 2. Validar status do upload
         $this->assertDatabaseHas('uploads', [
             'id' => $upload->id,
             'status' => 'completed',
         ]);
 
-        // Validar que todas as validações têm record_id
+        // 3. Validar que validações foram criadas
+        $validationCount = Validation::where('upload_id', $upload->id)->count();
+        $this->assertGreaterThan(0, $validationCount, 'Deve haver validações criadas');
+
+        // 4. Validar que NENHUMA validação é órfã
         $orphanedValidations = Validation::where('upload_id', $upload->id)
             ->whereNull('record_id')
             ->count();
@@ -154,17 +121,13 @@ CSV;
             'Nenhuma validação deve ter record_id nulo'
         );
 
-        // Validar que há validações
-        $validationCount = Validation::where('upload_id', $upload->id)->count();
-        $this->assertGreaterThan(0, $validationCount, 'Deve haver validações');
-
-        // Validar que cada record tem status válido
+        // 5. Validar que todos os records têm status válido
         $invalidStatusCount = Record::where('upload_id', $upload->id)
             ->whereNotIn('status', ['pending', 'approved', 'rejected', 'disputed'])
             ->count();
-        $this->assertEquals(0, $invalidStatusCount, 'Todos os records devem ter status válido');
+        $this->assertEquals(0, $invalidStatusCount, 'Todos os records devem ter status válido (pending, approved, rejected, disputed)');
 
-        // Validar que cada record tem validações
+        // 6. Validar que cada record tem validações
         $records = Record::where('upload_id', $upload->id)->get();
         foreach ($records as $record) {
             $recordValidations = $record->validations()->count();

@@ -228,9 +228,7 @@
                   <p class="text-gray-500 dark:text-gray-400">CPF: {{ selectedRecord.patient_cpf || 'Não informado' }}</p>
                 </div>
                 <div class="ml-auto">
-                  <span :class="getStatusBadgeClass(selectedRecord.status)" class="text-sm">
-                    {{ getStatusLabel(selectedRecord.status) }}
-                  </span>
+                  <StatusBadge :status="selectedRecord.status" />
                 </div>
               </div>
             </div>
@@ -242,9 +240,18 @@
                   <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                   </svg>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">Código</span>
+                </div>
+                <p class="font-mono font-semibold text-gray-900 dark:text-white">{{ selectedRecord.procedure_code || 'N/A' }}</p>
+              </div>
+              <div class="p-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-600 rounded-xl">
+                <div class="flex items-center gap-2 mb-2">
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
                   <span class="text-sm text-gray-500 dark:text-gray-400">Procedimento</span>
                 </div>
-                <p class="font-mono font-semibold text-gray-900 dark:text-white">{{ selectedRecord.procedure_code }}</p>
+                <p class="font-semibold text-gray-900 dark:text-white">{{ selectedRecord.procedure_name || 'Não informado' }}</p>
               </div>
               <div class="p-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-600 rounded-xl">
                 <div class="flex items-center gap-2 mb-2">
@@ -258,11 +265,38 @@
               <div class="p-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-600 rounded-xl">
                 <div class="flex items-center gap-2 mb-2">
                   <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                  </svg>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">Convênio</span>
+                </div>
+                <p class="font-semibold text-gray-900 dark:text-white">{{ selectedRecord.insurance_name || 'Não informado' }}</p>
+              </div>
+              <div class="p-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-600 rounded-xl">
+                <div class="flex items-center gap-2 mb-2">
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span class="text-sm text-gray-500 dark:text-gray-400">Valor Faturado</span>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">Faturado</span>
                 </div>
-                <p class="font-bold text-xl text-success-600 dark:text-success-400">{{ formatCurrency(selectedRecord.amount_billed) }}</p>
+                <p class="font-bold text-xl text-success-600 dark:text-success-400">{{ formatCurrency(selectedRecord.amount_billed || 0) }}</p>
+              </div>
+              <div class="p-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-600 rounded-xl">
+                <div class="flex items-center gap-2 mb-2">
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">Pago</span>
+                </div>
+                <p class="font-bold text-xl text-primary-600 dark:text-primary-400">{{ formatCurrency(selectedRecord.amount_paid || 0) }}</p>
+              </div>
+              <div class="p-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-600 rounded-xl">
+                <div class="flex items-center gap-2 mb-2">
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">Pendente</span>
+                </div>
+                <p class="font-bold text-xl text-warning-600 dark:text-warning-400">{{ formatCurrency(selectedRecord.amount_pending || 0) }}</p>
               </div>
               <div class="p-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-600 rounded-xl">
                 <div class="flex items-center gap-2 mb-2">
@@ -271,7 +305,7 @@
                   </svg>
                   <span class="text-sm text-gray-500 dark:text-gray-400">Status</span>
                 </div>
-                <p class="font-semibold text-gray-900 dark:text-white">{{ getStatusLabel(selectedRecord.status) }}</p>
+                <StatusBadge :status="selectedRecord.status" />
               </div>
             </div>
 
@@ -382,9 +416,16 @@ const applyFilters = async () => {
 const viewRecord = async (record) => {
   try {
     const response = await api.get(`/records/${record.id}`)
-    selectedRecord.value = response.data.data
-  } catch (error) {
-    console.error('Erro ao carregar detalhes:', error)
+    const payload = response.data.data
+
+    selectedRecord.value = {
+      ...payload.record,
+      validations: payload.validations || [],
+      errors: payload.errors || [],
+    }
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Erro ao carregar detalhes do registro'
+    console.error('Erro ao carregar detalhes:', err)
   }
 }
 
